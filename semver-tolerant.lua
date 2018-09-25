@@ -1,7 +1,16 @@
 
 local semver = require "semver"
 
+local M = {}
+M.semver = require "semver"
+
+local floatprecision = require "limits.floatprecision"
+
+M.dot4precision = floatprecision()
+M.limitreach = print
+
 local function v(vstring)
+	local semver = assert(M.semver)
 	-- allow v1.2.3 (auto remove the 'v' prefix)
 	if string.sub(vstring,1,1) == "v" then
 		vstring=string.sub(vstring,2)
@@ -15,13 +24,18 @@ local function v(vstring)
 		return a..(allowed[a] and "." or "")..b
 	end)
 	-- special 1.2.3.4 or 1.2.3.4+anything
-	local prefix, dot4, suffix = string.match(vstring, "^([0-9]+%.[0-9]+%.[0-9]+)(%.[0-9]+)(.*)$")
+	local prefix, dot4, suffix = string.match(vstring, "^([0-9]+%.[0-9]+%.[0-9]+)%.([0-9]+)(.*)$")
 	if prefix then
-		if not dot4:find("^%.0*$") then -- there is dot number after the patch
+		if dot4 and not dot4:find("^%.0*$") then -- there is dot number after the patch (but ignore .0)
 			-- let's make a little hack
 			local v = semver(prefix..(suffix or ""))
-			v.patch = assert(tonumber(tostring(v.patch)..dot4)) or v.patch
-			v.strpatch = dot4
+			local pad = assert(M.dot4precision, "missing semver-tolerant.dot4precision")
+			if #dot4+#tostring(v.patch)>pad then
+				M.limitreach("subpatch is larger than supported: "..#dot4.."+"..#tostring(v.patch)..">"..pad.." for version "..vstring)
+			end
+			local padding = ((pad-#dot4>0) and (("0"):rep(pad-#dot4)) or "")
+			v.patch = assert(tonumber(tostring(v.patch).."."..padding..dot4)) or v.patch
+			v.subpatch = dot4
 			return v
 		end
 		-- it is just .0 => can be removed and be semver compatible
@@ -30,17 +44,20 @@ local function v(vstring)
 -- :gsub("^([0-9]+%.[0-9]+%.[0-9]+)%.([0-9].*)$", "%1+ERROR.%2")
 	return semver(vstring)
 end
+M.v=v
 
 local function _tostring(sv)
+	local semver = assert(M.semver)
 	assert(type(sv)=="table")
-	if sv.patch %1 >0 then
+	if sv.subpatch then
 		local s = tostring(sv) -- tostring by semver (we should get a 1.2.3 or 1.2.3[+-]any)
 		local major_minor, patch, suffix = string.match(s, "^([0-9]+%.[0-9]+%.)([0-9]+)([^0-9]*.*)$")
 		assert(major_minor) -- it must match
-		return major_minor..("%s"):format(sv.patch)..(suffix or "")
+		return major_minor..patch.."."..sv.subpatch..(suffix or "")
 	end
 	return tostring(sv)
 end
-local M={v=v,tostring=_tostring}
+M.tostring=_tostring
+
 setmetatable(M, {__call=function(_,...) return v(...) end})
 return M
