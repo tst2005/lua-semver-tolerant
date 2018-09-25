@@ -2,10 +2,10 @@ local semver = require"semver"
 local semver = require"semver-tolerant"
 local sort = require "semver-sort"(semver)
 
---local list = require "versions-lua-tosort"
---local list = require "versions-luajit-tosort"
---local list = require "versions-luarocks-tosort"
-local list = require "versions-4dot-tosort"
+--local list = require "samples.versions-lua-tosort"
+--local list = require "samples.versions-luajit-tosort"
+--local list = require "samples.versions-luarocks-tosort"
+local list = require "samples.versions-4dot-tosort"
 
 local keys = {}
 for i in ipairs(list) do
