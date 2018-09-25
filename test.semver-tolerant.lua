@@ -84,7 +84,7 @@ test_ok_ok "1.0.4"
 local sv = t("1.2.3.4-foobar.5")
 assert(sv.major==1)
 assert(sv.minor==2)
-assert(sv.patch==3.4)
+assert(sv.patch>3 and sv.patch<4)
 assert(t.tostring(sv)=="1.2.3.4-foobar.5")
 
 local x = "1.0.0.1"
